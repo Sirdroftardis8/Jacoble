@@ -15,10 +15,6 @@ body {
   font-size: clamp(0.5rem, 2.5vmin, 1.5rem);
 }
 
-.main-title {
-    text-align: center;
-}
-
 .keyboard {
   display: grid;
   grid-template-columns: repeat(20, minmax(auto, 1.25em));
