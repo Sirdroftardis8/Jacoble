@@ -1,6 +1,7 @@
 // All solutions for daily challenges
 const targetWords = [
   "cigar",
+  "jacob",
   "rebut",
   "sissy",
   "humph",
