@@ -163,6 +163,9 @@ async function shareResults(isWin) {
   guessHistory.forEach((row) => {
     shareText += row.map((color) => emojiMap[color]).join("") + "\n";
   });
+  
+  // Added website link at the bottom
+  shareText += `\nPlay at: https://jacobrothberg.com`;
 
   // Display and hook up share button
   const shareBtn = document.getElementById("share-btn");
