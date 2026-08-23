@@ -17,8 +17,13 @@ const DANCE_ANIMATION_DURATION = 500;
 const referenceDate = new Date(2022, 0, 1);
 const msOffsetFromRefDate = Date.now() - referenceDate;
 const dayOffsetFromRefDate = msOffsetFromRefDate / 1000 / 60 / 60 / 24;
-const targetWord =
-  targetWords[Math.floor(dayOffsetFromRefDate % targetWords.length)];
+
+// Track the specific game day index
+const currentGameNumber = Math.floor(dayOffsetFromRefDate);
+const targetWord = targetWords[currentGameNumber % targetWords.length];
+
+// NEW: Track all completed guesses made by the player
+const guessesHistory = [];
 
 startInteraction();
 
@@ -104,6 +109,10 @@ function submitGuess() {
   }
 
   stopInteraction();
+  
+  // NEW: Save the guess to your history state tracker
+  guessesHistory.push(guess);
+
   activeTiles.forEach((...params) => flipTile(...params, guess));
 }
 
@@ -164,6 +173,25 @@ function showAlert(message, duration = 1000) {
   }, duration);
 }
 
+// NEW: Customized alert that appends an interactive Share button inside the alert system
+function showGameOverAlert(message, gameNumber, guesses) {
+  const alert = document.createElement("div");
+  alert.classList.add("alert", "game-over-alert");
+  
+  const textNode = document.createElement("span");
+  textNode.textContent = message + " ";
+  alert.appendChild(textNode);
+  
+  const shareBtn = document.createElement("button");
+  shareBtn.textContent = "📊 Share";
+  shareBtn.style.marginLeft = "10px";
+  shareBtn.style.cursor = "pointer";
+  shareBtn.onclick = () => handleShare(gameNumber, guesses);
+  
+  alert.appendChild(shareBtn);
+  alertContainer.prepend(alert);
+}
+
 function shakeTiles(tiles) {
   tiles.forEach((tile) => {
     tile.classList.add("shake");
@@ -179,18 +207,21 @@ function shakeTiles(tiles) {
 
 function checkWinLose(guess, tiles) {
   if (guess === targetWord) {
-    showAlert("You Win!!! 🎉🎉", 6000);
     danceTiles(tiles);
     stopInteraction();
+    // CHANGED: Use the persistent share alert box instead of a auto-hiding popup
+    showGameOverAlert("You Win!!! 🎉", currentGameNumber, guessesHistory);
     return;
   }
 
   const remainingTiles = guessGrid.querySelectorAll(":not([data-letter])");
   if (remainingTiles.length === 0) {
-    showAlert("Correct word: " + targetWord.toUpperCase(), null);
     stopInteraction();
+    // CHANGED: Use the persistent share alert box for a loss
+    showGameOverAlert("Game Over! Word: " + targetWord.toUpperCase(), currentGameNumber, guessesHistory);
   }
 }
+
 function danceTiles(tiles) {
   tiles.forEach((tile, index) => {
     setTimeout(() => {
@@ -205,16 +236,24 @@ function danceTiles(tiles) {
     }, (index * DANCE_ANIMATION_DURATION) / 5);
   });
 }
+
+// NEW: Fully adapted text block parser optimized for your grid system rules
 function generateShareText(gameNumber, guesses, maxRows) {
-  const score = guesses.length triumphs ? guesses.length : 'X';
+  const lastGuess = guesses[guesses.length - 1];
+  const score = lastGuess === targetWord ? guesses.length : 'X';
   let text = `WordleClone #${gameNumber} ${score}/${maxRows}\n\n`;
 
   guesses.forEach(guess => {
-    const line = guess.evaluations.map(eva => {
-      if (eva === 'correct') return '🟩';
-      if (eva === 'present') return '🟨';
-      return '⬛️';
-    }).join('');
+    let line = '';
+    for (let i = 0; i < WORD_LENGTH; i++) {
+      if (guess[i] === targetWord[i]) {
+        line += '🟩';
+      } else if (targetWord.includes(guess[i])) {
+        line += '🟨';
+      } else {
+        line += '⬛';
+      }
+    }
     text += line + '\n';
   });
 
@@ -229,11 +268,10 @@ async function handleShare(gameNumber, guesses) {
       await navigator.share({ text: shareText });
       return;
     } catch (err) {
-      // Fall back to clipboard if user cancels native share
+      // User cancelled native sharing panel; automatically use copy fallback
     }
   }
   
   await navigator.clipboard.writeText(shareText);
-  showCopyToast(); // Trigger your UI toast element
+  showAlert("Copied to clipboard!", 2000);
 }
-
