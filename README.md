@@ -1,3 +1,5 @@
-# wordle_clone
+# Jacoble
 
-A simple vanilla js clone of Wordle
+Wordle for Jacobs by Jacob
+
+
