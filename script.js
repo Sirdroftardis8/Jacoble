@@ -6,10 +6,26 @@ let currentGuess = [];
 let nextLetter = 0;
 let rightGuessString = 'jacob';
 
-// Store the tile colors of each attempt to generate the share grid
-let guessHistory = []; 
+// Store the tile colors of each attempt for the share grid
+let guessHistory = [];
 
 console.log(rightGuessString);
+
+// Custom Toast popup replacement for Toastr
+function showToast(message, duration = 3000) {
+  const container = document.getElementById("toast-container");
+  if (!container) return;
+
+  const toast = document.createElement("div");
+  toast.className = "custom-toast";
+  toast.textContent = message;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.remove();
+  }, duration);
+}
 
 function initBoard() {
   let board = document.getElementById("game-board");
@@ -65,18 +81,18 @@ function checkGuess() {
   }
 
   if (guessString.length != 5) {
-    toastr.error("Not enough letters!");
+    showToast("Not enough letters!");
     return;
   }
 
   if (!WORDS.includes(guessString)) {
-    toastr.error("Word not in list!");
+    showToast("Word not in list!");
     return;
   }
 
   var letterColor = ["gray", "gray", "gray", "gray", "gray"];
 
-  //check green
+  // check green
   for (let i = 0; i < 5; i++) {
     if (rightGuess[i] == currentGuess[i]) {
       letterColor[i] = "green";
@@ -84,12 +100,10 @@ function checkGuess() {
     }
   }
 
-  //check yellow
-  //checking guess letters
+  // check yellow
   for (let i = 0; i < 5; i++) {
     if (letterColor[i] == "green") continue;
 
-    //checking right letters
     for (let j = 0; j < 5; j++) {
       if (rightGuess[j] == currentGuess[i]) {
         letterColor[i] = "yellow";
@@ -98,16 +112,16 @@ function checkGuess() {
     }
   }
 
-  // Save tile results for sharing
+  // Save color sequence for emoji grid
   guessHistory.push([...letterColor]);
 
   for (let i = 0; i < 5; i++) {
     let box = row.children[i];
     let delay = 250 * i;
     setTimeout(() => {
-      //flip box
+      // flip box
       animateCSS(box, "flipInX");
-      //shade box
+      // shade box
       box.style.backgroundColor = letterColor[i];
       shadeKeyBoard(guessString.charAt(i) + "", letterColor[i]);
     }, delay);
@@ -116,9 +130,9 @@ function checkGuess() {
   if (guessString === rightGuessString) {
     guessesRemaining = 0;
     setTimeout(() => {
-      toastr.success("You guessed right! Game over!");
+      showToast("You guessed right! Game over!");
       shareResults(true);
-    }, 1500); // Wait for tile animations to finish
+    }, 1500);
     return;
   } else {
     guessesRemaining -= 1;
@@ -127,15 +141,15 @@ function checkGuess() {
 
     if (guessesRemaining === 0) {
       setTimeout(() => {
-        toastr.error("You've run out of guesses! Game over!");
-        toastr.info(`The right word was: "${rightGuessString}"`);
+        showToast("You've run out of guesses! Game over!");
+        showToast(`The right word was: "${rightGuessString}"`);
         shareResults(false);
       }, 1500);
     }
   }
 }
 
-// Generates emoji grid & copies to clipboard/opens native share
+// Generate share grid & handle copy/share
 async function shareResults(isWin) {
   const emojiMap = {
     green: "🟩",
@@ -150,7 +164,14 @@ async function shareResults(isWin) {
     shareText += row.map((color) => emojiMap[color]).join("") + "\n";
   });
 
-  // Try Web Share API (Mobile), fallback to Clipboard API
+  // Display and hook up share button
+  const shareBtn = document.getElementById("share-btn");
+  if (shareBtn) {
+    shareBtn.style.display = "block";
+    shareBtn.onclick = () => shareResults(isWin);
+  }
+
+  // Native share dialog for mobile browsers
   if (navigator.share && navigator.canShare && navigator.canShare({ text: shareText })) {
     try {
       await navigator.share({ text: shareText });
@@ -160,12 +181,13 @@ async function shareResults(isWin) {
     }
   }
 
+  // Fallback to Clipboard API for desktop
   if (navigator.clipboard) {
     try {
       await navigator.clipboard.writeText(shareText.trim());
-      toastr.info("Copied results to clipboard!");
+      showToast("Copied results to clipboard!");
     } catch (err) {
-      toastr.error("Failed to copy results.");
+      showToast("Failed to copy results.");
     }
   }
 }
@@ -186,7 +208,6 @@ function insertLetter(pressedKey) {
 }
 
 const animateCSS = (element, animation, prefix = "animate__") =>
-  // We create a Promise and return it
   new Promise((resolve, reject) => {
     const animationName = `${prefix}${animation}`;
     const node = element;
