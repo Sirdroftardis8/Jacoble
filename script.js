@@ -130,7 +130,7 @@ function checkGuess() {
   if (guessString === rightGuessString) {
     guessesRemaining = 0;
     setTimeout(() => {
-      showToast("You guessed right! Game over!");
+      showToast("You got it!");
       shareResults(true);
     }, 1500);
     return;
@@ -141,7 +141,7 @@ function checkGuess() {
 
     if (guessesRemaining === 0) {
       setTimeout(() => {
-        showToast("You've run out of guesses! Game over!");
+        showToast("You suck! Game over!");
         showToast(`The right word was: "${rightGuessString}"`);
         shareResults(false);
       }, 1500);
