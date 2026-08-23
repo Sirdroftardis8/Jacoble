@@ -158,14 +158,12 @@ async function shareResults(isWin) {
   };
 
   const score = isWin ? guessHistory.length : "X";
-  let shareText = `Jacoble ${score}/${NUMBER_OF_GUESSES}\n\n`;
+  let shareText = `Jacoble ${score}/${NUMBER_OF_GUESSES}\n\nhttps://jacobrothberg.com`;
 
   guessHistory.forEach((row) => {
     shareText += row.map((color) => emojiMap[color]).join("") + "\n";
   });
   
-  // Added website link at the bottom
-  shareText += `\nPlay at: https://jacobrothberg.com`;
 
   // Display and hook up share button
   const shareBtn = document.getElementById("share-btn");
