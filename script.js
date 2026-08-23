@@ -205,3 +205,35 @@ function danceTiles(tiles) {
     }, (index * DANCE_ANIMATION_DURATION) / 5);
   });
 }
+function generateShareText(gameNumber, guesses, maxRows) {
+  const score = guesses.length triumphs ? guesses.length : 'X';
+  let text = `WordleClone #${gameNumber} ${score}/${maxRows}\n\n`;
+
+  guesses.forEach(guess => {
+    const line = guess.evaluations.map(eva => {
+      if (eva === 'correct') return '🟩';
+      if (eva === 'present') return '🟨';
+      return '⬛️';
+    }).join('');
+    text += line + '\n';
+  });
+
+  return text.trim();
+}
+
+async function handleShare(gameNumber, guesses) {
+  const shareText = generateShareText(gameNumber, guesses, 6);
+  
+  if (navigator.share) {
+    try {
+      await navigator.share({ text: shareText });
+      return;
+    } catch (err) {
+      // Fall back to clipboard if user cancels native share
+    }
+  }
+  
+  await navigator.clipboard.writeText(shareText);
+  showCopyToast(); // Trigger your UI toast element
+}
+
