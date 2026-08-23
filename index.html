@@ -6,15 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jacoble</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet"/>
     <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
   />
 </head>
 <body>
+    <!-- Container for custom toast popups -->
+    <div id="toast-container"></div>
+
     <h1> Jacoble </h1>
     
+    <!-- Share button starts hidden, will display when game ends -->
+    <button id="share-btn" style="display: none;">Share Results 📋</button>
+
     <div id="game-board">
 
     </div>
@@ -56,11 +61,6 @@
         </div>
     </div>
 
-<script
-src="https://code.jquery.com/jquery-3.6.0.min.js"
-integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
-crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 <script src="script.js" type="module"></script>
 </body>
 </html>
