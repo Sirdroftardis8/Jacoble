@@ -6,6 +6,9 @@ let currentGuess = [];
 let nextLetter = 0;
 let rightGuessString = 'jacob';
 
+// Store the tile colors of each attempt to generate the share grid
+let guessHistory = []; 
+
 console.log(rightGuessString);
 
 function initBoard() {
@@ -95,6 +98,9 @@ function checkGuess() {
     }
   }
 
+  // Save tile results for sharing
+  guessHistory.push([...letterColor]);
+
   for (let i = 0; i < 5; i++) {
     let box = row.children[i];
     let delay = 250 * i;
@@ -108,8 +114,11 @@ function checkGuess() {
   }
 
   if (guessString === rightGuessString) {
-    toastr.success("You guessed right! Game over!");
     guessesRemaining = 0;
+    setTimeout(() => {
+      toastr.success("You guessed right! Game over!");
+      shareResults(true);
+    }, 1500); // Wait for tile animations to finish
     return;
   } else {
     guessesRemaining -= 1;
@@ -117,8 +126,46 @@ function checkGuess() {
     nextLetter = 0;
 
     if (guessesRemaining === 0) {
-      toastr.error("You've run out of guesses! Game over!");
-      toastr.info(`The right word was: "${rightGuessString}"`);
+      setTimeout(() => {
+        toastr.error("You've run out of guesses! Game over!");
+        toastr.info(`The right word was: "${rightGuessString}"`);
+        shareResults(false);
+      }, 1500);
+    }
+  }
+}
+
+// Generates emoji grid & copies to clipboard/opens native share
+async function shareResults(isWin) {
+  const emojiMap = {
+    green: "🟩",
+    yellow: "🟨",
+    gray: "⬛"
+  };
+
+  const score = isWin ? guessHistory.length : "X";
+  let shareText = `Jacoble ${score}/${NUMBER_OF_GUESSES}\n\n`;
+
+  guessHistory.forEach((row) => {
+    shareText += row.map((color) => emojiMap[color]).join("") + "\n";
+  });
+
+  // Try Web Share API (Mobile), fallback to Clipboard API
+  if (navigator.share && navigator.canShare && navigator.canShare({ text: shareText })) {
+    try {
+      await navigator.share({ text: shareText });
+      return;
+    } catch (err) {
+      if (err.name === "AbortError") return;
+    }
+  }
+
+  if (navigator.clipboard) {
+    try {
+      await navigator.clipboard.writeText(shareText.trim());
+      toastr.info("Copied results to clipboard!");
+    } catch (err) {
+      toastr.error("Failed to copy results.");
     }
   }
 }
@@ -142,13 +189,11 @@ const animateCSS = (element, animation, prefix = "animate__") =>
   // We create a Promise and return it
   new Promise((resolve, reject) => {
     const animationName = `${prefix}${animation}`;
-    // const node = document.querySelector(element);
     const node = element;
     node.style.setProperty("--animate-duration", "0.3s");
 
     node.classList.add(`${prefix}animated`, animationName);
 
-    // When the animation ends, we clean the classes and resolve the Promise
     function handleAnimationEnd(event) {
       event.stopPropagation();
       node.classList.remove(`${prefix}animated`, animationName);
