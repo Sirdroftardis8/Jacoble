@@ -159,21 +159,19 @@ async function shareResults(isWin) {
 
   const score = isWin ? guessHistory.length : "X";
 
-  // Build grid rows first
+  // Build grid rows
   const gridRows = guessHistory.map((row) =>
     row.map((color) => emojiMap[color]).join("")
   );
 
-  // Construct the final text using an array to guarantee line order
-  const shareLines = [
+  // Construct single string - URL strictly at the bottom
+  const shareText = [
     `Jacoble ${score}/${NUMBER_OF_GUESSES}`,
     "",
     ...gridRows,
     "",
     "https://jacobrothberg.com"
-  ];
-
-  const shareText = shareLines.join("\n").trim();
+  ].join("\n");
 
   // Display and hook up share button
   const shareBtn = document.getElementById("share-btn");
@@ -182,8 +180,8 @@ async function shareResults(isWin) {
     shareBtn.onclick = () => shareResults(isWin);
   }
 
-  // Native share dialog for mobile browsers
-  if (navigator.share && navigator.canShare && navigator.canShare({ text: shareText })) {
+  // Mobile Web Share API - pass text ONLY (do not add a separate url property)
+  if (navigator.share) {
     try {
       await navigator.share({ text: shareText });
       return;
@@ -192,7 +190,7 @@ async function shareResults(isWin) {
     }
   }
 
-  // Fallback to Clipboard API for desktop
+  // Fallback Clipboard API
   if (navigator.clipboard) {
     try {
       await navigator.clipboard.writeText(shareText);
