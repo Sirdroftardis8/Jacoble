@@ -1,4 +1,5 @@
 export const WORDS = [
+    'jacob',
     'which',
     'there',
     'their',
