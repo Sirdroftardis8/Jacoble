@@ -158,18 +158,22 @@ async function shareResults(isWin) {
   };
 
   const score = isWin ? guessHistory.length : "X";
-  
-// Header
-  let shareText = `Jacoble ${score}/${NUMBER_OF_GUESSES}\n\n`;
 
-  // Emoji Grid
-  guessHistory.forEach((row) => {
-    shareText += row.map((color) => emojiMap[color]).join("") + "\n";
-  });
+  // Build grid rows first
+  const gridRows = guessHistory.map((row) =>
+    row.map((color) => emojiMap[color]).join("")
+  );
 
-  // Link placed directly underneath the emojis
-  shareText += `https://jacobrothberg.com`;
-  
+  // Construct the final text using an array to guarantee line order
+  const shareLines = [
+    `Jacoble ${score}/${NUMBER_OF_GUESSES}`,
+    "",
+    ...gridRows,
+    "",
+    "https://jacobrothberg.com"
+  ];
+
+  const shareText = shareLines.join("\n").trim();
 
   // Display and hook up share button
   const shareBtn = document.getElementById("share-btn");
@@ -191,7 +195,7 @@ async function shareResults(isWin) {
   // Fallback to Clipboard API for desktop
   if (navigator.clipboard) {
     try {
-      await navigator.clipboard.writeText(shareText.trim());
+      await navigator.clipboard.writeText(shareText);
       showToast("Copied results to clipboard!");
     } catch (err) {
       showToast("Failed to copy results.");
