@@ -263,14 +263,25 @@ function generateShareText(gameNumber, guesses, maxRows) {
 async function handleShare(gameNumber, guesses) {
   const shareText = generateShareText(gameNumber, guesses, 6);
   
+  // 1. Try mobile/native system sharing sheet first
   if (navigator.share) {
     try {
       await navigator.share({ text: shareText });
       return;
     } catch (err) {
-      // User cancelled native sharing panel; automatically use copy fallback
+      // Native window closed or blocked; fall through to clipboard copy
     }
   }
+  
+  // 2. Desktop fallback: Force a visible alert popup window
+  try {
+    await navigator.clipboard.writeText(shareText);
+    alert("📊 Results copied to clipboard!");
+  } catch (err) {
+    console.error("Clipboard copy failed: ", err);
+  }
+}
+
   
   await navigator.clipboard.writeText(shareText);
   showAlert("Copied to clipboard!", 2000);
