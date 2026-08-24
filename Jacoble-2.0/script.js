@@ -6,11 +6,31 @@ let currentGuess = [];
 let nextLetter = 0;
 let guessHistory = [];
 
-// The target word NEVER changes
-const rightGuessString = "jacob";
+// The authentic target word
+let rightGuessString = "jacob";
 
-// Calculate daily game number with Epoch = August 23, 2026
-// Month index in JS Date constructor is 0-indexed (7 = August)
+// Jacob Verification Security State
+let isRealJacob = false;
+const SECRET_JACOB_WORD = "pizzatime"; // Passcode for true Jacobs
+
+function authenticateUser() {
+  const name = prompt("Welcome to Jacoble! Please enter your first name:");
+  if (name && name.trim().toLowerCase() === "jacob") {
+    const secret = prompt("Hello Jacob. Enter the secret passcode:");
+    if (secret && secret.trim().toLowerCase() === SECRET_JACOB_WORD) {
+      isRealJacob = true;
+      showToast("Access Granted. Welcome, Jacob!");
+      return;
+    }
+  }
+  
+  isRealJacob = false;
+  showToast("Guest Mode Activated.");
+}
+
+authenticateUser();
+
+// Calculate daily game number (Epoch: August 23, 2026)
 const GAME_EPOCH = new Date(2026, 7, 23).getTime();
 
 function getGameNumber() {
@@ -81,10 +101,23 @@ function insertLetter(pressedKey) {
   nextLetter += 1;
 }
 
+// Generates an unwinnable target word dynamically for non-Jacobs
+function getUnwinnableTarget(userGuess) {
+  const alphabet = "abcdefghijklmnopqrstuvwxyz";
+  let target = "";
+  for (let i = 0; i < 5; i++) {
+    let char = alphabet[Math.floor(Math.random() * alphabet.length)];
+    while (char === userGuess[i]) {
+      char = alphabet[Math.floor(Math.random() * alphabet.length)];
+    }
+    target += char;
+  }
+  return target;
+}
+
 function checkGuess() {
   let row = document.getElementsByClassName("letter-row")[NUMBER_OF_GUESSES - guessesRemaining];
   let guessString = currentGuess.join("");
-  let rightGuess = Array.from(rightGuessString);
 
   if (guessString.length !== 5) {
     showToast("Not enough letters!");
@@ -96,9 +129,12 @@ function checkGuess() {
     return;
   }
 
+  let activeTarget = isRealJacob ? rightGuessString : getUnwinnableTarget(guessString);
+  let rightGuess = Array.from(activeTarget);
+
   let letterColor = ["gray", "gray", "gray", "gray", "gray"];
 
-  // First pass: find exact green matches
+  // First pass: green matches
   for (let i = 0; i < 5; i++) {
     if (rightGuess[i] === guessString[i]) {
       letterColor[i] = "green";
@@ -106,7 +142,7 @@ function checkGuess() {
     }
   }
 
-  // Second pass: find yellow matches
+  // Second pass: yellow matches
   for (let i = 0; i < 5; i++) {
     if (letterColor[i] === "green") continue;
 
@@ -119,7 +155,6 @@ function checkGuess() {
     }
   }
 
-  // Push guess colors to history FIRST before checking game completion
   guessHistory.push([...letterColor]);
 
   // Animate row tiles
@@ -134,7 +169,7 @@ function checkGuess() {
   }
 
   // Check win condition
-  if (guessString === rightGuessString) {
+  if (guessString === activeTarget) {
     guessesRemaining = 0;
     setTimeout(() => {
       showToast("You guessed right! Game over!");
@@ -149,7 +184,8 @@ function checkGuess() {
     if (guessesRemaining === 0) {
       setTimeout(() => {
         showToast("You've run out of guesses! Game over!");
-        showToast(`The right word was: "${rightGuessString}"`);
+        const revealWord = isRealJacob ? rightGuessString : WORDS[Math.floor(Math.random() * WORDS.length)];
+        showToast(`The right word was: "${revealWord}"`);
         shareResults(false);
       }, 1500);
     }
@@ -165,22 +201,19 @@ async function shareResults(isWin) {
 
   const score = isWin ? guessHistory.length : "X";
 
-  // Build emoji grid
   const grid = guessHistory
     .map((row) => row.map((color) => emojiMap[color]).join(""))
     .join("\n");
 
-  // Construct final share string with game number and link strictly at bottom
-  const shareText = `Jacoble #${currentGameNumber} ${score}/${NUMBER_OF_GUESSES}\n\n${grid}\n\nhttps://jacobrothberg.com`;
+  // Updated share link for the Jacob-2.0 subpath
+  const shareText = `Jacoble #${currentGameNumber} ${score}/${NUMBER_OF_GUESSES}\n\n${grid}\n\nhttps://jacobrothberg.com/Jacob-2.0`;
 
-  // Display and hook up share button
   const shareBtn = document.getElementById("share-btn");
   if (shareBtn) {
     shareBtn.style.display = "block";
     shareBtn.onclick = () => shareResults(isWin);
   }
 
-  // Mobile Web Share API
   if (navigator.share && navigator.canShare && navigator.canShare({ text: shareText })) {
     try {
       await navigator.share({ text: shareText });
@@ -190,7 +223,6 @@ async function shareResults(isWin) {
     }
   }
 
-  // Fallback Clipboard API
   if (navigator.clipboard) {
     try {
       await navigator.clipboard.writeText(shareText);
@@ -202,14 +234,18 @@ async function shareResults(isWin) {
 }
 
 function showToast(message) {
-  // Utility toast function implementation or custom alert fallback
+  const container = document.getElementById("toast-container");
+  if (!container) return;
+
   const toast = document.createElement("div");
+  toast.className = "custom-toast";
   toast.textContent = message;
-  toast.className = "toast-message";
-  document.body.appendChild(toast);
+
+  container.appendChild(toast);
+
   setTimeout(() => {
     toast.remove();
-  }, 2500);
+  }, 3000);
 }
 
 const animateCSS = (element, animation, prefix = "animate__") =>
