@@ -9,9 +9,9 @@ let guessHistory = [];
 // The authentic target word
 let rightGuessString = "jacob";
 
-// Jacob Verification Security State
+// Security state and secret passcode
 let isRealJacob = false;
-const SECRET_JACOB_WORD = "pizzatime";
+const SECRET_JACOB_WORD = "jacob";
 
 // Calculate daily game number (Epoch: August 23, 2026)
 const GAME_EPOCH = new Date(2026, 7, 23).getTime();
@@ -33,28 +33,76 @@ function setupGate() {
 
   if (!gateBtn || !nameInput || !secretInput) return;
 
-  const verifyUser = () => {
-    const name = nameInput.value.trim().toLowerCase();
-    const secret = secretInput.value.trim().toLowerCase();
+  let promptForPasscode = false;
 
-    if (name === "jacob" && secret === SECRET_JACOB_WORD) {
-      isRealJacob = true;
+  const verifyUser = () => {
+    const rawName = nameInput.value.trim();
+    const name = rawName.toLowerCase();
+    const passcode = secretInput.value.trim().toLowerCase();
+
+    if (!rawName) {
+      showToast("Please enter a name");
+      return;
+    }
+
+    const formattedName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+
+    // Scenario A: User is NOT named Jacob
+    if (name !== "jacob") {
+      isRealJacob = false;
+      secretInput.style.display = "none";
+      promptForPasscode = false;
       if (statusDiv) {
-        statusDiv.textContent = "Verified Jacob: Full Victory Access";
+        statusDiv.textContent = `Verified: Welcome, ${formattedName}!`;
         statusDiv.style.color = "#538d4e";
       }
-      showToast("Access Granted. Welcome, Jacob!");
-    } else {
-      isRealJacob = false;
+      showToast(`Welcome, ${formattedName}!`);
+      return;
+    }
+
+    // Scenario B: User IS named Jacob, step 1 -> Ask for passcode
+    if (name === "jacob" && !promptForPasscode) {
+      promptForPasscode = true;
+      secretInput.style.display = "inline-block";
+      secretInput.focus();
       if (statusDiv) {
-        statusDiv.textContent = "Unverified Player (Guest Mode)";
-        statusDiv.style.color = "#818384";
+        statusDiv.textContent = "Confirm identity: Enter passcode";
+        statusDiv.style.color = "#d7a15c";
       }
-      showToast("Guest Mode Active");
+      showToast("Passcode required to verify Jacob");
+      return;
+    }
+
+    // Scenario C: User claims to be Jacob and provided a passcode
+    if (name === "jacob" && promptForPasscode) {
+      if (passcode === SECRET_JACOB_WORD) {
+        isRealJacob = true;
+        if (statusDiv) {
+          statusDiv.textContent = "Verified Jacob: Victory Unlocked";
+          statusDiv.style.color = "#538d4e";
+        }
+        showToast("Access Granted. Welcome, Jacob!");
+      } else {
+        isRealJacob = false;
+        if (statusDiv) {
+          statusDiv.textContent = "Don't lie about being a Jacob!";
+          statusDiv.style.color = "#a72020";
+        }
+        showToast("Don't lie about being a Jacob!");
+      }
     }
   };
 
-  gateBtn.onclick = verifyUser;
+  gateBtn.addEventListener("click", verifyUser);
+
+  // If they change input away from Jacob, hide passcode box
+  nameInput.addEventListener("input", () => {
+    if (nameInput.value.trim().toLowerCase() !== "jacob") {
+      secretInput.style.display = "none";
+      promptForPasscode = false;
+    }
+  });
+
   nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") verifyUser(); });
   secretInput.addEventListener("keydown", (e) => { if (e.key === "Enter") verifyUser(); });
 }
@@ -283,7 +331,6 @@ const animateCSS = (element, animation, prefix = "animate__") =>
   });
 
 document.addEventListener("keyup", (e) => {
-  // Ignore keyup events while typing inside the verification inputs
   const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
   if (activeTag === "input" || activeTag === "textarea") return;
 
