@@ -32,10 +32,7 @@ function setupGate() {
   const secretInput = document.getElementById("gate-secret");
   const statusDiv = document.getElementById("gate-status");
 
-  if (!gateBtn || !nameInput || !secretInput) {
-    console.error("Gate elements not found in DOM.");
-    return;
-  }
+  if (!gateBtn || !nameInput || !secretInput) return;
 
   let promptForPasscode = false;
 
@@ -46,9 +43,9 @@ function setupGate() {
   };
 
   const verifyUser = () => {
-    const rawName = nameInput.value ? nameInput.value.trim() : "";
+    const rawName = nameInput.value.trim();
     const name = rawName.toLowerCase();
-    const passcode = secretInput.value ? secretInput.value.trim().toLowerCase() : "";
+    const passcode = secretInput.value.trim().toLowerCase();
 
     if (!rawName) {
       showToast("Please enter a name");
@@ -102,19 +99,8 @@ function setupGate() {
     }
   });
 
-  nameInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      verifyUser();
-    }
-  });
-
-  secretInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      verifyUser();
-    }
-  });
+  nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") verifyUser(); });
+  secretInput.addEventListener("keydown", (e) => { if (e.key === "Enter") verifyUser(); });
 }
 
 function initBoard() {
@@ -285,7 +271,7 @@ function checkGuess() {
   if (guessString === activeTarget) {
     guessesRemaining = 0;
     setTimeout(() => {
-      showToast("Good job, Jacob!");
+      showToast("Good job, Jacob!" );
       shareResults(true);
     }, 1500);
     return;
@@ -296,6 +282,7 @@ function checkGuess() {
 
     if (guessesRemaining === 0) {
       setTimeout(() => {
+        const revealWord = isRealJacob ? rightGuessString : WORDS[Math.floor(Math.random() * WORDS.length)];
         showToast("Better luck next time!");
         shareResults(false);
       }, 1500);
