@@ -71,7 +71,7 @@ function setupGate() {
         statusDiv.textContent = "Confirm identity: Enter passcode";
         statusDiv.style.color = "#d7a15c";
       }
-      showToast("Passcode required");
+      showToast("Prove it!");
       return;
     }
 
