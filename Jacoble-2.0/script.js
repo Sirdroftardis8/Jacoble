@@ -32,7 +32,10 @@ function setupGate() {
   const secretInput = document.getElementById("gate-secret");
   const statusDiv = document.getElementById("gate-status");
 
-  if (!gateBtn || !nameInput || !secretInput) return;
+  if (!gateBtn || !nameInput || !secretInput) {
+    console.error("Gate elements not found in DOM.");
+    return;
+  }
 
   let promptForPasscode = false;
 
@@ -43,9 +46,9 @@ function setupGate() {
   };
 
   const verifyUser = () => {
-    const rawName = nameInput.value.trim();
+    const rawName = nameInput.value ? nameInput.value.trim() : "";
     const name = rawName.toLowerCase();
-    const passcode = secretInput.value.trim().toLowerCase();
+    const passcode = secretInput.value ? secretInput.value.trim().toLowerCase() : "";
 
     if (!rawName) {
       showToast("Please enter a name");
@@ -99,8 +102,19 @@ function setupGate() {
     }
   });
 
-  nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") verifyUser(); });
-  secretInput.addEventListener("keydown", (e) => { if (e.key === "Enter") verifyUser(); });
+  nameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      verifyUser();
+    }
+  });
+
+  secretInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      verifyUser();
+    }
+  });
 }
 
 function initBoard() {
@@ -172,7 +186,7 @@ function insertLetter(pressedKey) {
 let cachedFakeTarget = null;
 
 function getUnwinnableTarget(userGuess) {
-  // If we don't have a fake target yet, pick a word with at least 5 neighbors
+  // If no fake target exists yet, select an initial high-mobility starter word
   if (!cachedFakeTarget) {
     const candidates = WORDS.filter((word) => {
       if (word.length !== 5) return false;
@@ -190,13 +204,12 @@ function getUnwinnableTarget(userGuess) {
       return false;
     });
 
-    // Fall back to a default high-mobility word if list search is empty
     cachedFakeTarget = candidates.length > 0 
       ? candidates[Math.floor(Math.random() * candidates.length)] 
       : "slate";
   }
 
-  // If the user happens to guess the exact fake target, swap it to a valid neighbor
+  // If the user's guess matches the fake target, swap ONLY the single differing letter
   if (userGuess === cachedFakeTarget) {
     const validNeighbors = WORDS.filter((w) => {
       if (w === userGuess) return false;
@@ -209,6 +222,7 @@ function getUnwinnableTarget(userGuess) {
     });
 
     if (validNeighbors.length > 0) {
+      // Reassign fake target to a neighboring word, preserving 4 out of 5 green letters
       cachedFakeTarget = validNeighbors[Math.floor(Math.random() * validNeighbors.length)];
     }
   }
@@ -271,7 +285,7 @@ function checkGuess() {
   if (guessString === activeTarget) {
     guessesRemaining = 0;
     setTimeout(() => {
-      showToast("Good job, Jacob!" );
+      showToast("Good job, Jacob!");
       shareResults(true);
     }, 1500);
     return;
@@ -282,7 +296,6 @@ function checkGuess() {
 
     if (guessesRemaining === 0) {
       setTimeout(() => {
-        const revealWord = isRealJacob ? rightGuessString : WORDS[Math.floor(Math.random() * WORDS.length)];
         showToast("Better luck next time!");
         shareResults(false);
       }, 1500);
