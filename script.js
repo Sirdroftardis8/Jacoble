@@ -4,28 +4,23 @@ const NUMBER_OF_GUESSES = 6;
 let guessesRemaining = NUMBER_OF_GUESSES;
 let currentGuess = [];
 let nextLetter = 0;
-let rightGuessString = 'jacob';
-
-// Store the tile colors of each attempt for the share grid
 let guessHistory = [];
 
-console.log(rightGuessString);
+// The target word NEVER changes
+const rightGuessString = "jacob";
 
-// Custom Toast popup replacement for Toastr
-function showToast(message, duration = 3000) {
-  const container = document.getElementById("toast-container");
-  if (!container) return;
+// Calculate daily game number with Epoch = August 23, 2026
+// Month index in JS Date constructor is 0-indexed (7 = August)
+const GAME_EPOCH = new Date(2026, 7, 23).getTime();
 
-  const toast = document.createElement("div");
-  toast.className = "custom-toast";
-  toast.textContent = message;
-
-  container.appendChild(toast);
-
-  setTimeout(() => {
-    toast.remove();
-  }, duration);
+function getGameNumber() {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const dayDifference = Math.floor((today - GAME_EPOCH) / (1000 * 60 * 60 * 24));
+  return Math.max(1, dayDifference + 1);
 }
+
+const currentGameNumber = getGameNumber();
 
 function initBoard() {
   let board = document.getElementById("game-board");
@@ -63,7 +58,7 @@ function shadeKeyBoard(letter, color) {
 }
 
 function deleteLetter() {
-  let row = document.getElementsByClassName("letter-row")[6 - guessesRemaining];
+  let row = document.getElementsByClassName("letter-row")[NUMBER_OF_GUESSES - guessesRemaining];
   let box = row.children[nextLetter - 1];
   box.textContent = "";
   box.classList.remove("filled-box");
@@ -71,16 +66,27 @@ function deleteLetter() {
   nextLetter -= 1;
 }
 
+function insertLetter(pressedKey) {
+  if (nextLetter === 5) {
+    return;
+  }
+  pressedKey = pressedKey.toLowerCase();
+
+  let row = document.getElementsByClassName("letter-row")[NUMBER_OF_GUESSES - guessesRemaining];
+  let box = row.children[nextLetter];
+  animateCSS(box, "popIn");
+  box.textContent = pressedKey;
+  box.classList.add("filled-box");
+  currentGuess.push(pressedKey);
+  nextLetter += 1;
+}
+
 function checkGuess() {
-  let row = document.getElementsByClassName("letter-row")[6 - guessesRemaining];
-  let guessString = "";
+  let row = document.getElementsByClassName("letter-row")[NUMBER_OF_GUESSES - guessesRemaining];
+  let guessString = currentGuess.join("");
   let rightGuess = Array.from(rightGuessString);
 
-  for (const val of currentGuess) {
-    guessString += val;
-  }
-
-  if (guessString.length != 5) {
+  if (guessString.length !== 5) {
     showToast("Not enough letters!");
     return;
   }
@@ -90,47 +96,48 @@ function checkGuess() {
     return;
   }
 
-  var letterColor = ["gray", "gray", "gray", "gray", "gray"];
+  let letterColor = ["gray", "gray", "gray", "gray", "gray"];
 
-  // check green
+  // First pass: find exact green matches
   for (let i = 0; i < 5; i++) {
-    if (rightGuess[i] == currentGuess[i]) {
+    if (rightGuess[i] === guessString[i]) {
       letterColor[i] = "green";
-      rightGuess[i] = "#";
+      rightGuess[i] = null;
     }
   }
 
-  // check yellow
+  // Second pass: find yellow matches
   for (let i = 0; i < 5; i++) {
-    if (letterColor[i] == "green") continue;
+    if (letterColor[i] === "green") continue;
 
     for (let j = 0; j < 5; j++) {
-      if (rightGuess[j] == currentGuess[i]) {
+      if (rightGuess[j] === guessString[i]) {
         letterColor[i] = "yellow";
-        rightGuess[j] = "#";
+        rightGuess[j] = null;
+        break;
       }
     }
   }
 
-  // Save color sequence for emoji grid
+  // Push guess colors to history FIRST before checking game completion
   guessHistory.push([...letterColor]);
 
+  // Animate row tiles
   for (let i = 0; i < 5; i++) {
     let box = row.children[i];
     let delay = 250 * i;
     setTimeout(() => {
-      // flip box
       animateCSS(box, "flipInX");
-      // shade box
       box.style.backgroundColor = letterColor[i];
       shadeKeyBoard(guessString.charAt(i) + "", letterColor[i]);
     }, delay);
   }
 
+  // Check win condition
   if (guessString === rightGuessString) {
     guessesRemaining = 0;
     setTimeout(() => {
-      showToast("You got it!");
+      showToast("You guessed right! Game over!");
       shareResults(true);
     }, 1500);
     return;
@@ -141,7 +148,7 @@ function checkGuess() {
 
     if (guessesRemaining === 0) {
       setTimeout(() => {
-        showToast("You suck! Game over!");
+        showToast("You've run out of guesses! Game over!");
         showToast(`The right word was: "${rightGuessString}"`);
         shareResults(false);
       }, 1500);
@@ -158,13 +165,13 @@ async function shareResults(isWin) {
 
   const score = isWin ? guessHistory.length : "X";
 
-  // Format grid rows
+  // Build emoji grid
   const grid = guessHistory
     .map((row) => row.map((color) => emojiMap[color]).join(""))
     .join("\n");
 
-  // Construct final string with clean line breaks
-  const shareText = `Jacoble ${score}/${NUMBER_OF_GUESSES}\n\n${grid}\n\nhttps://jacobrothberg.com`;
+  // Construct final share string with game number and link strictly at bottom
+  const shareText = `Jacoble #${currentGameNumber} ${score}/${NUMBER_OF_GUESSES}\n\n${grid}\n\nhttps://jacobrothberg.com`;
 
   // Display and hook up share button
   const shareBtn = document.getElementById("share-btn");
@@ -194,36 +201,30 @@ async function shareResults(isWin) {
   }
 }
 
-function insertLetter(pressedKey) {
-  if (nextLetter === 5) {
-    return;
-  }
-  pressedKey = pressedKey.toLowerCase();
-
-  let row = document.getElementsByClassName("letter-row")[6 - guessesRemaining];
-  let box = row.children[nextLetter];
-  animateCSS(box, "pulse");
-  box.textContent = pressedKey;
-  box.classList.add("filled-box");
-  currentGuess.push(pressedKey);
-  nextLetter += 1;
+function showToast(message) {
+  // Utility toast function implementation or custom alert fallback
+  const toast = document.createElement("div");
+  toast.textContent = message;
+  toast.className = "toast-message";
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.remove();
+  }, 2500);
 }
 
 const animateCSS = (element, animation, prefix = "animate__") =>
-  new Promise((resolve, reject) => {
+  new Promise((resolve) => {
     const animationName = `${prefix}${animation}`;
-    const node = element;
-    node.style.setProperty("--animate-duration", "0.3s");
 
-    node.classList.add(`${prefix}animated`, animationName);
+    element.classList.add(`${prefix}animated`, animationName);
 
     function handleAnimationEnd(event) {
       event.stopPropagation();
-      node.classList.remove(`${prefix}animated`, animationName);
+      element.classList.remove(`${prefix}animated`, animationName);
       resolve("Animation ended");
     }
 
-    node.addEventListener("animationend", handleAnimationEnd, { once: true });
+    element.addEventListener("animationend", handleAnimationEnd, { once: true });
   });
 
 document.addEventListener("keyup", (e) => {
@@ -242,8 +243,8 @@ document.addEventListener("keyup", (e) => {
     return;
   }
 
-  let found = pressedKey.match(/[a-z]/gi);
-  if (!found || found.length > 1) {
+  let found = pressedKey.match(/[a-z]/i);
+  if (!found || found[0].length !== 1) {
     return;
   } else {
     insertLetter(pressedKey);
