@@ -11,7 +11,7 @@ let rightGuessString = "jacob";
 
 // Security state and secret passcode
 let isRealJacob = false;
-const SECRET_JACOB_WORD = "jacob";
+const SECRET_JACOB_WORD = "Monkey";
 
 // Calculate daily game number (Epoch: August 23, 2026)
 const GAME_EPOCH = new Date(2026, 7, 23).getTime();
