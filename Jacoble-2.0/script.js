@@ -25,61 +25,44 @@ function getGameNumber() {
 
 const currentGameNumber = getGameNumber();
 
-function createAuthModal() {
-  // Remove existing modal if one already exists
-  const existingModal = document.getElementById("auth-modal-backdrop");
-  if (existingModal) existingModal.remove();
+function setupGate() {
+  const gateBtn = document.getElementById("gate-btn");
+  const nameInput = document.getElementById("gate-name");
+  const secretInput = document.getElementById("gate-secret");
+  const statusDiv = document.getElementById("gate-status");
 
-  const modalHTML = `
-    <div id="auth-modal-backdrop" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:999999; font-family:sans-serif;">
-      <div style="background:#121213; border:1px solid #3a3a3c; padding:24px; border-radius:12px; text-align:center; max-width:320px; width:90%; color:#fff; box-shadow:0 8px 32px rgba(0,0,0,0.5);">
-        <h2 style="margin-top:0; font-size:22px; margin-bottom:8px;">Welcome to Jacoble</h2>
-        <p style="font-size:14px; color:#ccc; margin-bottom:16px;">Please verify your identity to proceed.</p>
-        <input id="auth-name-input" type="text" placeholder="First Name" style="width:100%; padding:12px; margin-bottom:10px; box-sizing:border-box; border-radius:6px; border:1px solid #3a3a3c; background:#1e1e1f; color:#fff; font-size:16px; outline:none;">
-        <input id="auth-secret-input" type="password" placeholder="Passcode (Optional)" style="width:100%; padding:12px; margin-bottom:16px; box-sizing:border-box; border-radius:6px; border:1px solid #3a3a3c; background:#1e1e1f; color:#fff; font-size:16px; outline:none;">
-        <button id="auth-submit-btn" style="width:100%; padding:12px; border:none; background:#538d4e; color:#fff; font-weight:bold; border-radius:6px; font-size:16px; cursor:pointer;">Start Playing</button>
-      </div>
-    </div>
-  `;
-  document.body.insertAdjacentHTML("beforeend", modalHTML);
+  if (!gateBtn || !nameInput || !secretInput) return;
 
-  const submitAuth = () => {
-    const name = (document.getElementById("auth-name-input")?.value || "").trim().toLowerCase();
-    const secret = (document.getElementById("auth-secret-input")?.value || "").trim().toLowerCase();
+  const verifyUser = () => {
+    const name = nameInput.value.trim().toLowerCase();
+    const secret = secretInput.value.trim().toLowerCase();
 
     if (name === "jacob" && secret === SECRET_JACOB_WORD) {
       isRealJacob = true;
+      if (statusDiv) {
+        statusDiv.textContent = "Verified Jacob: Full Victory Access";
+        statusDiv.style.color = "#538d4e";
+      }
       showToast("Access Granted. Welcome, Jacob!");
     } else {
       isRealJacob = false;
-      showToast("Guest Mode Activated.");
+      if (statusDiv) {
+        statusDiv.textContent = "Unverified Player (Guest Mode)";
+        statusDiv.style.color = "#818384";
+      }
+      showToast("Guest Mode Active");
     }
-
-    const backdrop = document.getElementById("auth-modal-backdrop");
-    if (backdrop) backdrop.remove();
   };
 
-  document.getElementById("auth-submit-btn").onclick = submitAuth;
-
-  // Handle 'Enter' key inside inputs
-  const nameInput = document.getElementById("auth-name-input");
-  const secretInput = document.getElementById("auth-secret-input");
-
-  nameInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") submitAuth();
-  });
-  secretInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") submitAuth();
-  });
-
-  // Auto-focus first input field
-  setTimeout(() => nameInput.focus(), 100);
+  gateBtn.onclick = verifyUser;
+  nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") verifyUser(); });
+  secretInput.addEventListener("keydown", (e) => { if (e.key === "Enter") verifyUser(); });
 }
 
 function initBoard() {
   let board = document.getElementById("game-board");
   if (!board) return;
-  board.innerHTML = ""; // Clear existing grid if any
+  board.innerHTML = "";
 
   for (let i = 0; i < NUMBER_OF_GUESSES; i++) {
     let row = document.createElement("div");
@@ -300,7 +283,10 @@ const animateCSS = (element, animation, prefix = "animate__") =>
   });
 
 document.addEventListener("keyup", (e) => {
-  if (document.getElementById("auth-modal-backdrop")) return;
+  // Ignore keyup events while typing inside the verification inputs
+  const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
+  if (activeTag === "input" || activeTag === "textarea") return;
+
   if (guessesRemaining === 0) return;
 
   let pressedKey = String(e.key);
@@ -325,7 +311,8 @@ document.addEventListener("keyup", (e) => {
 const keyboardContainer = document.getElementById("keyboard-cont");
 if (keyboardContainer) {
   keyboardContainer.addEventListener("click", (e) => {
-    if (document.getElementById("auth-modal-backdrop")) return;
+    const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
+    if (activeTag === "input" || activeTag === "textarea") return;
 
     const target = e.target;
     if (!target.classList.contains("keyboard-button")) return;
@@ -337,10 +324,9 @@ if (keyboardContainer) {
   });
 }
 
-// Immediate + Safe DOM Load Handler
 function startApp() {
   initBoard();
-  createAuthModal();
+  setupGate();
 }
 
 if (document.readyState === "loading") {
