@@ -269,7 +269,7 @@ async function shareResults(isWin) {
     .map((row) => row.map((color) => emojiMap[color]).join(""))
     .join("\n");
 
-  const shareText = `Jacoble #${currentGameNumber} ${score}/${NUMBER_OF_GUESSES}\n\n${grid}\n\nhttps://jacobrothberg.com/Jacob-2.0`;
+  const shareText = `Jacoble #${currentGameNumber} ${score}/${NUMBER_OF_GUESSES}\n\n${grid}\n\nhttps://jacobrothberg.com/Jacoble-2.0`;
 
   const shareBtn = document.getElementById("share-btn");
   if (shareBtn) {
