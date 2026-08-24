@@ -6,11 +6,14 @@ let currentGuess = [];
 let nextLetter = 0;
 let guessHistory = [];
 
-// The target word NEVER changes
-const rightGuessString = "jacob";
+// The authentic target word
+let rightGuessString = "jacob";
 
-// Calculate daily game number with Epoch = August 23, 2026
-// Month index in JS Date constructor is 0-indexed (7 = August)
+// Security state and secret passcode
+let isRealJacob = false;
+const SECRET_JACOB_WORD = "monkey";
+
+// Calculate daily game number (Epoch: August 23, 2026)
 const GAME_EPOCH = new Date(2026, 7, 23).getTime();
 
 function getGameNumber() {
@@ -22,8 +25,88 @@ function getGameNumber() {
 
 const currentGameNumber = getGameNumber();
 
+function setupGate() {
+  const gateContainer = document.getElementById("jacob-gate");
+  const gateBtn = document.getElementById("gate-btn");
+  const nameInput = document.getElementById("gate-name");
+  const secretInput = document.getElementById("gate-secret");
+  const statusDiv = document.getElementById("gate-status");
+
+  if (!gateBtn || !nameInput || !secretInput) return;
+
+  let promptForPasscode = false;
+
+  const hideGate = () => {
+    if (gateContainer) {
+      gateContainer.style.display = "none";
+    }
+  };
+
+  const verifyUser = () => {
+    const rawName = nameInput.value.trim();
+    const name = rawName.toLowerCase();
+    const passcode = secretInput.value.trim().toLowerCase();
+
+    if (!rawName) {
+      showToast("Please enter a name");
+      return;
+    }
+
+    const formattedName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+
+    // Scenario A: User is NOT named Jacob -> Let them in, lock win condition, remove gate
+    if (name !== "jacob") {
+      isRealJacob = false;
+      showToast(`Welcome, ${formattedName}!`);
+      hideGate();
+      return;
+    }
+
+    // Scenario B: User IS named Jacob, step 1 -> Ask for passcode
+    if (name === "jacob" && !promptForPasscode) {
+      promptForPasscode = true;
+      secretInput.style.display = "inline-block";
+      secretInput.focus();
+      if (statusDiv) {
+        statusDiv.textContent = "Confirm identity: Enter passcode";
+        statusDiv.style.color = "#d7a15c";
+      }
+      showToast("Prove it!");
+      return;
+    }
+
+    // Scenario C: User claims to be Jacob and provided a passcode
+    if (name === "jacob" && promptForPasscode) {
+      if (passcode === SECRET_JACOB_WORD) {
+        isRealJacob = true;
+        showToast(`Welcome, ${formattedName}!`);
+        hideGate();
+      } else {
+        isRealJacob = false;
+        showToast("Don't lie about being a Jacob!");
+        hideGate();
+      }
+    }
+  };
+
+  gateBtn.addEventListener("click", verifyUser);
+
+  // If they change input away from Jacob, hide passcode box
+  nameInput.addEventListener("input", () => {
+    if (nameInput.value.trim().toLowerCase() !== "jacob") {
+      secretInput.style.display = "none";
+      promptForPasscode = false;
+    }
+  });
+
+  nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") verifyUser(); });
+  secretInput.addEventListener("keydown", (e) => { if (e.key === "Enter") verifyUser(); });
+}
+
 function initBoard() {
   let board = document.getElementById("game-board");
+  if (!board) return;
+  board.innerHTML = "";
 
   for (let i = 0; i < NUMBER_OF_GUESSES; i++) {
     let row = document.createElement("div");
@@ -59,7 +142,9 @@ function shadeKeyBoard(letter, color) {
 
 function deleteLetter() {
   let row = document.getElementsByClassName("letter-row")[NUMBER_OF_GUESSES - guessesRemaining];
+  if (!row) return;
   let box = row.children[nextLetter - 1];
+  if (!box) return;
   box.textContent = "";
   box.classList.remove("filled-box");
   currentGuess.pop();
@@ -73,7 +158,9 @@ function insertLetter(pressedKey) {
   pressedKey = pressedKey.toLowerCase();
 
   let row = document.getElementsByClassName("letter-row")[NUMBER_OF_GUESSES - guessesRemaining];
+  if (!row) return;
   let box = row.children[nextLetter];
+  if (!box) return;
   animateCSS(box, "popIn");
   box.textContent = pressedKey;
   box.classList.add("filled-box");
@@ -81,10 +168,57 @@ function insertLetter(pressedKey) {
   nextLetter += 1;
 }
 
+// Cache for an unwinnable target that has high letter mobility
+let cachedFakeTarget = null;
+
+function getUnwinnableTarget(userGuess) {
+  // If we don't have a fake target yet, pick a word with at least 5 neighbors
+  if (!cachedFakeTarget) {
+    const candidates = WORDS.filter((word) => {
+      if (word.length !== 5) return false;
+      let neighborCount = 0;
+      for (const w of WORDS) {
+        if (w === word) continue;
+        let diff = 0;
+        for (let i = 0; i < 5; i++) {
+          if (word[i] !== w[i]) diff++;
+          if (diff > 1) break;
+        }
+        if (diff === 1) neighborCount++;
+        if (neighborCount >= 5) return true;
+      }
+      return false;
+    });
+
+    // Fall back to a default high-mobility word if list search is empty
+    cachedFakeTarget = candidates.length > 0 
+      ? candidates[Math.floor(Math.random() * candidates.length)] 
+      : "slate";
+  }
+
+  // If the user happens to guess the exact fake target, swap it to a valid neighbor
+  if (userGuess === cachedFakeTarget) {
+    const validNeighbors = WORDS.filter((w) => {
+      if (w === userGuess) return false;
+      let diff = 0;
+      for (let i = 0; i < 5; i++) {
+        if (cachedFakeTarget[i] !== w[i]) diff++;
+        if (diff > 1) break;
+      }
+      return diff === 1;
+    });
+
+    if (validNeighbors.length > 0) {
+      cachedFakeTarget = validNeighbors[Math.floor(Math.random() * validNeighbors.length)];
+    }
+  }
+
+  return cachedFakeTarget;
+}
+
 function checkGuess() {
   let row = document.getElementsByClassName("letter-row")[NUMBER_OF_GUESSES - guessesRemaining];
   let guessString = currentGuess.join("");
-  let rightGuess = Array.from(rightGuessString);
 
   if (guessString.length !== 5) {
     showToast("Not enough letters!");
@@ -96,9 +230,12 @@ function checkGuess() {
     return;
   }
 
+  let activeTarget = isRealJacob ? rightGuessString : getUnwinnableTarget(guessString);
+  let rightGuess = Array.from(activeTarget);
+
   let letterColor = ["gray", "gray", "gray", "gray", "gray"];
 
-  // First pass: find exact green matches
+  // First pass: green matches
   for (let i = 0; i < 5; i++) {
     if (rightGuess[i] === guessString[i]) {
       letterColor[i] = "green";
@@ -106,7 +243,7 @@ function checkGuess() {
     }
   }
 
-  // Second pass: find yellow matches
+  // Second pass: yellow matches
   for (let i = 0; i < 5; i++) {
     if (letterColor[i] === "green") continue;
 
@@ -119,10 +256,8 @@ function checkGuess() {
     }
   }
 
-  // Push guess colors to history FIRST before checking game completion
   guessHistory.push([...letterColor]);
 
-  // Animate row tiles
   for (let i = 0; i < 5; i++) {
     let box = row.children[i];
     let delay = 250 * i;
@@ -133,11 +268,10 @@ function checkGuess() {
     }, delay);
   }
 
-  // Check win condition
-  if (guessString === rightGuessString) {
+  if (guessString === activeTarget) {
     guessesRemaining = 0;
     setTimeout(() => {
-      showToast("You guessed right! Game over!");
+      showToast("Good job, Jacob!" );
       shareResults(true);
     }, 1500);
     return;
@@ -148,8 +282,8 @@ function checkGuess() {
 
     if (guessesRemaining === 0) {
       setTimeout(() => {
-        showToast("You've run out of guesses! Game over!");
-        showToast(`The right word was: "${rightGuessString}"`);
+        const revealWord = isRealJacob ? rightGuessString : WORDS[Math.floor(Math.random() * WORDS.length)];
+        showToast("Better luck next time!");
         shareResults(false);
       }, 1500);
     }
@@ -165,22 +299,18 @@ async function shareResults(isWin) {
 
   const score = isWin ? guessHistory.length : "X";
 
-  // Build emoji grid
   const grid = guessHistory
     .map((row) => row.map((color) => emojiMap[color]).join(""))
     .join("\n");
 
-  // Construct final share string with game number and link strictly at bottom
-  const shareText = `Jacoble #${currentGameNumber} ${score}/${NUMBER_OF_GUESSES}\n\n${grid}\n\nhttps://jacobrothberg.com`;
+  const shareText = `Jacoble #${currentGameNumber} ${score}/${NUMBER_OF_GUESSES}\n\n${grid}\n\nhttps://jacobrothberg.com/Jacoble-2.0`;
 
-  // Display and hook up share button
   const shareBtn = document.getElementById("share-btn");
   if (shareBtn) {
     shareBtn.style.display = "block";
     shareBtn.onclick = () => shareResults(isWin);
   }
 
-  // Mobile Web Share API
   if (navigator.share && navigator.canShare && navigator.canShare({ text: shareText })) {
     try {
       await navigator.share({ text: shareText });
@@ -190,7 +320,6 @@ async function shareResults(isWin) {
     }
   }
 
-  // Fallback Clipboard API
   if (navigator.clipboard) {
     try {
       await navigator.clipboard.writeText(shareText);
@@ -202,14 +331,18 @@ async function shareResults(isWin) {
 }
 
 function showToast(message) {
-  // Utility toast function implementation or custom alert fallback
+  const container = document.getElementById("toast-container") || document.body;
+
   const toast = document.createElement("div");
+  toast.className = "custom-toast";
+  toast.style.cssText = "position:fixed; top:10%; left:50%; transform:translateX(-50%); background:#fff; color:#000; padding:10px 16px; border-radius:4px; font-weight:bold; z-index:100000; box-shadow:0 4px 12px rgba(0,0,0,0.3); pointer-events:none;";
   toast.textContent = message;
-  toast.className = "toast-message";
-  document.body.appendChild(toast);
+
+  container.appendChild(toast);
+
   setTimeout(() => {
     toast.remove();
-  }, 2500);
+  }, 3000);
 }
 
 const animateCSS = (element, animation, prefix = "animate__") =>
@@ -228,9 +361,10 @@ const animateCSS = (element, animation, prefix = "animate__") =>
   });
 
 document.addEventListener("keyup", (e) => {
-  if (guessesRemaining === 0) {
-    return;
-  }
+  const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
+  if (activeTag === "input" || activeTag === "textarea") return;
+
+  if (guessesRemaining === 0) return;
 
   let pressedKey = String(e.key);
   if (pressedKey === "Backspace" && nextLetter !== 0) {
@@ -251,19 +385,29 @@ document.addEventListener("keyup", (e) => {
   }
 });
 
-document.getElementById("keyboard-cont").addEventListener("click", (e) => {
-  const target = e.target;
+const keyboardContainer = document.getElementById("keyboard-cont");
+if (keyboardContainer) {
+  keyboardContainer.addEventListener("click", (e) => {
+    const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
+    if (activeTag === "input" || activeTag === "textarea") return;
 
-  if (!target.classList.contains("keyboard-button")) {
-    return;
-  }
-  let key = target.textContent;
+    const target = e.target;
+    if (!target.classList.contains("keyboard-button")) return;
 
-  if (key === "Del") {
-    key = "Backspace";
-  }
+    let key = target.textContent;
+    if (key === "Del") key = "Backspace";
 
-  document.dispatchEvent(new KeyboardEvent("keyup", { key: key }));
-});
+    document.dispatchEvent(new KeyboardEvent("keyup", { key: key }));
+  });
+}
 
-initBoard();
+function startApp() {
+  initBoard();
+  setupGate();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", startApp);
+} else {
+  startApp();
+}
