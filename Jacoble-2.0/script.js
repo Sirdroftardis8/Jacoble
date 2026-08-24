@@ -26,6 +26,7 @@ function getGameNumber() {
 const currentGameNumber = getGameNumber();
 
 function setupGate() {
+  const gateContainer = document.getElementById("jacob-gate");
   const gateBtn = document.getElementById("gate-btn");
   const nameInput = document.getElementById("gate-name");
   const secretInput = document.getElementById("gate-secret");
@@ -34,6 +35,12 @@ function setupGate() {
   if (!gateBtn || !nameInput || !secretInput) return;
 
   let promptForPasscode = false;
+
+  const hideGate = () => {
+    if (gateContainer) {
+      gateContainer.style.display = "none";
+    }
+  };
 
   const verifyUser = () => {
     const rawName = nameInput.value.trim();
@@ -47,16 +54,11 @@ function setupGate() {
 
     const formattedName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
 
-    // Scenario A: User is NOT named Jacob
+    // Scenario A: User is NOT named Jacob -> Let them in, lock win condition, remove gate
     if (name !== "jacob") {
       isRealJacob = false;
-      secretInput.style.display = "none";
-      promptForPasscode = false;
-      if (statusDiv) {
-        statusDiv.textContent = `Verified: Welcome, ${formattedName}!`;
-        statusDiv.style.color = "#538d4e";
-      }
       showToast(`Welcome, ${formattedName}!`);
+      hideGate();
       return;
     }
 
@@ -69,7 +71,7 @@ function setupGate() {
         statusDiv.textContent = "Confirm identity: Enter passcode";
         statusDiv.style.color = "#d7a15c";
       }
-      showToast("Passcode required to verify Jacob");
+      showToast("Passcode required");
       return;
     }
 
@@ -77,18 +79,12 @@ function setupGate() {
     if (name === "jacob" && promptForPasscode) {
       if (passcode === SECRET_JACOB_WORD) {
         isRealJacob = true;
-        if (statusDiv) {
-          statusDiv.textContent = "Verified Jacob: Victory Unlocked";
-          statusDiv.style.color = "#538d4e";
-        }
-        showToast("Access Granted. Welcome, Jacob!");
+        showToast(`Welcome, ${formattedName}!`);
+        hideGate();
       } else {
         isRealJacob = false;
-        if (statusDiv) {
-          statusDiv.textContent = "Don't lie about being a Jacob!";
-          statusDiv.style.color = "#a72020";
-        }
         showToast("Don't lie about being a Jacob!");
+        hideGate();
       }
     }
   };
