@@ -20,15 +20,19 @@
     <!-- Share button starts hidden, will display when game ends -->
     <button id="share-btn" style="display: none;">Share Results 📋</button>
 
-    <!-- Identity Verification Bar -->
+<!-- Identity Verification Bar -->
 <div id="jacob-gate" style="text-align: center; margin: 15px auto; max-width: 400px; padding: 12px; background: #121213; border: 1px solid #3a3a3c; border-radius: 8px; color: #fff; font-family: sans-serif;">
   <div id="gate-inputs" style="display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap;">
     <input id="gate-name" type="text" placeholder="First Name" style="padding: 8px 12px; border-radius: 4px; border: 1px solid #3a3a3c; background: #1e1e1f; color: #fff; width: 110px; font-size: 14px;">
-    <input id="gate-secret" type="password" placeholder="Passcode" style="padding: 8px 12px; border-radius: 4px; border: 1px solid #3a3a3c; background: #1e1e1f; color: #fff; width: 110px; font-size: 14px;">
-    <button id="gate-btn" style="padding: 8px 16px; background: #538d4e; color: #fff; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">Verify</button>
+    
+    <!-- Passcode input (hidden by default) -->
+    <input id="gate-secret" type="password" placeholder="Passcode" style="padding: 8px 12px; border-radius: 4px; border: 1px solid #3a3a3c; background: #1e1e1f; color: #fff; width: 110px; font-size: 14px; display: none;">
+    
+    <button id="gate-btn" type="button" style="padding: 8px 16px; background: #538d4e; color: #fff; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">Verify</button>
   </div>
-  <div id="gate-status" style="margin-top: 6px; font-size: 13px; color: #818384;">Unverified Player (Guest Mode)</div>
+  <div id="gate-status" style="margin-top: 6px; font-size: 13px; color: #818384;">Please enter your name to begin</div>
 </div>
+
 
     <div id="game-board">
 
