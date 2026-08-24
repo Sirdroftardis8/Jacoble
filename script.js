@@ -4,109 +4,31 @@ const NUMBER_OF_GUESSES = 6;
 let guessesRemaining = NUMBER_OF_GUESSES;
 let currentGuess = [];
 let nextLetter = 0;
+let rightGuessString = 'jacob';
+
+// Store the tile colors of each attempt for the share grid
 let guessHistory = [];
 
-// The authentic target word
-let rightGuessString = "jacob";
+console.log(rightGuessString);
 
-// Security state and secret passcode
-let isRealJacob = false;
-const SECRET_JACOB_WORD = "monkey";
+// Custom Toast popup replacement for Toastr
+function showToast(message, duration = 3000) {
+  const container = document.getElementById("toast-container");
+  if (!container) return;
 
-// Calculate daily game number (Epoch: August 23, 2026)
-const GAME_EPOCH = new Date(2026, 7, 23).getTime();
+  const toast = document.createElement("div");
+  toast.className = "custom-toast";
+  toast.textContent = message;
 
-function getGameNumber() {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const dayDifference = Math.floor((today - GAME_EPOCH) / (1000 * 60 * 60 * 24));
-  return Math.max(1, dayDifference + 1);
-}
+  container.appendChild(toast);
 
-const currentGameNumber = getGameNumber();
-
-function setupGate() {
-  const gateContainer = document.getElementById("jacob-gate");
-  const gateBtn = document.getElementById("gate-btn");
-  const nameInput = document.getElementById("gate-name");
-  const secretInput = document.getElementById("gate-secret");
-  const statusDiv = document.getElementById("gate-status");
-
-  if (!gateBtn || !nameInput || !secretInput) return;
-
-  let promptForPasscode = false;
-
-  const hideGate = () => {
-    if (gateContainer) {
-      gateContainer.style.display = "none";
-    }
-  };
-
-  const verifyUser = () => {
-    const rawName = nameInput.value.trim();
-    const name = rawName.toLowerCase();
-    const passcode = secretInput.value.trim().toLowerCase();
-
-    if (!rawName) {
-      showToast("Please enter a name");
-      return;
-    }
-
-    const formattedName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
-
-    // Scenario A: User is NOT named Jacob -> Let them in, lock win condition, remove gate
-    if (name !== "jacob") {
-      isRealJacob = false;
-      showToast(`Welcome, ${formattedName}!`);
-      hideGate();
-      return;
-    }
-
-    // Scenario B: User IS named Jacob, step 1 -> Ask for passcode
-    if (name === "jacob" && !promptForPasscode) {
-      promptForPasscode = true;
-      secretInput.style.display = "inline-block";
-      secretInput.focus();
-      if (statusDiv) {
-        statusDiv.textContent = "Confirm identity: Enter passcode";
-        statusDiv.style.color = "#d7a15c";
-      }
-      showToast("Prove it!");
-      return;
-    }
-
-    // Scenario C: User claims to be Jacob and provided a passcode
-    if (name === "jacob" && promptForPasscode) {
-      if (passcode === SECRET_JACOB_WORD) {
-        isRealJacob = true;
-        showToast(`Welcome, ${formattedName}!`);
-        hideGate();
-      } else {
-        isRealJacob = false;
-        showToast("Don't lie about being a Jacob!");
-        hideGate();
-      }
-    }
-  };
-
-  gateBtn.addEventListener("click", verifyUser);
-
-  // If they change input away from Jacob, hide passcode box
-  nameInput.addEventListener("input", () => {
-    if (nameInput.value.trim().toLowerCase() !== "jacob") {
-      secretInput.style.display = "none";
-      promptForPasscode = false;
-    }
-  });
-
-  nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") verifyUser(); });
-  secretInput.addEventListener("keydown", (e) => { if (e.key === "Enter") verifyUser(); });
+  setTimeout(() => {
+    toast.remove();
+  }, duration);
 }
 
 function initBoard() {
   let board = document.getElementById("game-board");
-  if (!board) return;
-  board.innerHTML = "";
 
   for (let i = 0; i < NUMBER_OF_GUESSES; i++) {
     let row = document.createElement("div");
@@ -141,86 +63,24 @@ function shadeKeyBoard(letter, color) {
 }
 
 function deleteLetter() {
-  let row = document.getElementsByClassName("letter-row")[NUMBER_OF_GUESSES - guessesRemaining];
-  if (!row) return;
+  let row = document.getElementsByClassName("letter-row")[6 - guessesRemaining];
   let box = row.children[nextLetter - 1];
-  if (!box) return;
   box.textContent = "";
   box.classList.remove("filled-box");
   currentGuess.pop();
   nextLetter -= 1;
 }
 
-function insertLetter(pressedKey) {
-  if (nextLetter === 5) {
-    return;
-  }
-  pressedKey = pressedKey.toLowerCase();
-
-  let row = document.getElementsByClassName("letter-row")[NUMBER_OF_GUESSES - guessesRemaining];
-  if (!row) return;
-  let box = row.children[nextLetter];
-  if (!box) return;
-  animateCSS(box, "popIn");
-  box.textContent = pressedKey;
-  box.classList.add("filled-box");
-  currentGuess.push(pressedKey);
-  nextLetter += 1;
-}
-
-// Cache for an unwinnable target that has high letter mobility
-let cachedFakeTarget = null;
-
-function getUnwinnableTarget(userGuess) {
-  // If we don't have a fake target yet, pick a word with at least 5 neighbors
-  if (!cachedFakeTarget) {
-    const candidates = WORDS.filter((word) => {
-      if (word.length !== 5) return false;
-      let neighborCount = 0;
-      for (const w of WORDS) {
-        if (w === word) continue;
-        let diff = 0;
-        for (let i = 0; i < 5; i++) {
-          if (word[i] !== w[i]) diff++;
-          if (diff > 1) break;
-        }
-        if (diff === 1) neighborCount++;
-        if (neighborCount >= 5) return true;
-      }
-      return false;
-    });
-
-    // Fall back to a default high-mobility word if list search is empty
-    cachedFakeTarget = candidates.length > 0 
-      ? candidates[Math.floor(Math.random() * candidates.length)] 
-      : "slate";
-  }
-
-  // If the user happens to guess the exact fake target, swap it to a valid neighbor
-  if (userGuess === cachedFakeTarget) {
-    const validNeighbors = WORDS.filter((w) => {
-      if (w === userGuess) return false;
-      let diff = 0;
-      for (let i = 0; i < 5; i++) {
-        if (cachedFakeTarget[i] !== w[i]) diff++;
-        if (diff > 1) break;
-      }
-      return diff === 1;
-    });
-
-    if (validNeighbors.length > 0) {
-      cachedFakeTarget = validNeighbors[Math.floor(Math.random() * validNeighbors.length)];
-    }
-  }
-
-  return cachedFakeTarget;
-}
-
 function checkGuess() {
-  let row = document.getElementsByClassName("letter-row")[NUMBER_OF_GUESSES - guessesRemaining];
-  let guessString = currentGuess.join("");
+  let row = document.getElementsByClassName("letter-row")[6 - guessesRemaining];
+  let guessString = "";
+  let rightGuess = Array.from(rightGuessString);
 
-  if (guessString.length !== 5) {
+  for (const val of currentGuess) {
+    guessString += val;
+  }
+
+  if (guessString.length != 5) {
     showToast("Not enough letters!");
     return;
   }
@@ -230,48 +90,47 @@ function checkGuess() {
     return;
   }
 
-  let activeTarget = isRealJacob ? rightGuessString : getUnwinnableTarget(guessString);
-  let rightGuess = Array.from(activeTarget);
+  var letterColor = ["gray", "gray", "gray", "gray", "gray"];
 
-  let letterColor = ["gray", "gray", "gray", "gray", "gray"];
-
-  // First pass: green matches
+  // check green
   for (let i = 0; i < 5; i++) {
-    if (rightGuess[i] === guessString[i]) {
+    if (rightGuess[i] == currentGuess[i]) {
       letterColor[i] = "green";
-      rightGuess[i] = null;
+      rightGuess[i] = "#";
     }
   }
 
-  // Second pass: yellow matches
+  // check yellow
   for (let i = 0; i < 5; i++) {
-    if (letterColor[i] === "green") continue;
+    if (letterColor[i] == "green") continue;
 
     for (let j = 0; j < 5; j++) {
-      if (rightGuess[j] === guessString[i]) {
+      if (rightGuess[j] == currentGuess[i]) {
         letterColor[i] = "yellow";
-        rightGuess[j] = null;
-        break;
+        rightGuess[j] = "#";
       }
     }
   }
 
+  // Save color sequence for emoji grid
   guessHistory.push([...letterColor]);
 
   for (let i = 0; i < 5; i++) {
     let box = row.children[i];
     let delay = 250 * i;
     setTimeout(() => {
+      // flip box
       animateCSS(box, "flipInX");
+      // shade box
       box.style.backgroundColor = letterColor[i];
       shadeKeyBoard(guessString.charAt(i) + "", letterColor[i]);
     }, delay);
   }
 
-  if (guessString === activeTarget) {
+  if (guessString === rightGuessString) {
     guessesRemaining = 0;
     setTimeout(() => {
-      showToast("Good job, Jacob!" );
+      showToast("You got it!");
       shareResults(true);
     }, 1500);
     return;
@@ -282,8 +141,8 @@ function checkGuess() {
 
     if (guessesRemaining === 0) {
       setTimeout(() => {
-        const revealWord = isRealJacob ? rightGuessString : WORDS[Math.floor(Math.random() * WORDS.length)];
-        showToast("Better luck next time!");
+        showToast("You suck! Game over!");
+        showToast(`The right word was: "${rightGuessString}"`);
         shareResults(false);
       }, 1500);
     }
@@ -299,18 +158,22 @@ async function shareResults(isWin) {
 
   const score = isWin ? guessHistory.length : "X";
 
+  // Format grid rows
   const grid = guessHistory
     .map((row) => row.map((color) => emojiMap[color]).join(""))
     .join("\n");
 
-  const shareText = `Jacoble #${currentGameNumber} ${score}/${NUMBER_OF_GUESSES}\n\n${grid}\n\nhttps://jacobrothberg.com/Jacoble-2.0`;
+  // Construct final string with clean line breaks
+  const shareText = `Jacoble ${score}/${NUMBER_OF_GUESSES}\n\n${grid}\n\nhttps://jacobrothberg.com`;
 
+  // Display and hook up share button
   const shareBtn = document.getElementById("share-btn");
   if (shareBtn) {
     shareBtn.style.display = "block";
     shareBtn.onclick = () => shareResults(isWin);
   }
 
+  // Mobile Web Share API
   if (navigator.share && navigator.canShare && navigator.canShare({ text: shareText })) {
     try {
       await navigator.share({ text: shareText });
@@ -320,6 +183,7 @@ async function shareResults(isWin) {
     }
   }
 
+  // Fallback Clipboard API
   if (navigator.clipboard) {
     try {
       await navigator.clipboard.writeText(shareText);
@@ -330,41 +194,42 @@ async function shareResults(isWin) {
   }
 }
 
-function showToast(message) {
-  const container = document.getElementById("toast-container") || document.body;
+function insertLetter(pressedKey) {
+  if (nextLetter === 5) {
+    return;
+  }
+  pressedKey = pressedKey.toLowerCase();
 
-  const toast = document.createElement("div");
-  toast.className = "custom-toast";
-  toast.style.cssText = "position:fixed; top:10%; left:50%; transform:translateX(-50%); background:#fff; color:#000; padding:10px 16px; border-radius:4px; font-weight:bold; z-index:100000; box-shadow:0 4px 12px rgba(0,0,0,0.3); pointer-events:none;";
-  toast.textContent = message;
-
-  container.appendChild(toast);
-
-  setTimeout(() => {
-    toast.remove();
-  }, 3000);
+  let row = document.getElementsByClassName("letter-row")[6 - guessesRemaining];
+  let box = row.children[nextLetter];
+  animateCSS(box, "pulse");
+  box.textContent = pressedKey;
+  box.classList.add("filled-box");
+  currentGuess.push(pressedKey);
+  nextLetter += 1;
 }
 
 const animateCSS = (element, animation, prefix = "animate__") =>
-  new Promise((resolve) => {
+  new Promise((resolve, reject) => {
     const animationName = `${prefix}${animation}`;
+    const node = element;
+    node.style.setProperty("--animate-duration", "0.3s");
 
-    element.classList.add(`${prefix}animated`, animationName);
+    node.classList.add(`${prefix}animated`, animationName);
 
     function handleAnimationEnd(event) {
       event.stopPropagation();
-      element.classList.remove(`${prefix}animated`, animationName);
+      node.classList.remove(`${prefix}animated`, animationName);
       resolve("Animation ended");
     }
 
-    element.addEventListener("animationend", handleAnimationEnd, { once: true });
+    node.addEventListener("animationend", handleAnimationEnd, { once: true });
   });
 
 document.addEventListener("keyup", (e) => {
-  const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
-  if (activeTag === "input" || activeTag === "textarea") return;
-
-  if (guessesRemaining === 0) return;
+  if (guessesRemaining === 0) {
+    return;
+  }
 
   let pressedKey = String(e.key);
   if (pressedKey === "Backspace" && nextLetter !== 0) {
@@ -377,37 +242,27 @@ document.addEventListener("keyup", (e) => {
     return;
   }
 
-  let found = pressedKey.match(/[a-z]/i);
-  if (!found || found[0].length !== 1) {
+  let found = pressedKey.match(/[a-z]/gi);
+  if (!found || found.length > 1) {
     return;
   } else {
     insertLetter(pressedKey);
   }
 });
 
-const keyboardContainer = document.getElementById("keyboard-cont");
-if (keyboardContainer) {
-  keyboardContainer.addEventListener("click", (e) => {
-    const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
-    if (activeTag === "input" || activeTag === "textarea") return;
+document.getElementById("keyboard-cont").addEventListener("click", (e) => {
+  const target = e.target;
 
-    const target = e.target;
-    if (!target.classList.contains("keyboard-button")) return;
+  if (!target.classList.contains("keyboard-button")) {
+    return;
+  }
+  let key = target.textContent;
 
-    let key = target.textContent;
-    if (key === "Del") key = "Backspace";
+  if (key === "Del") {
+    key = "Backspace";
+  }
 
-    document.dispatchEvent(new KeyboardEvent("keyup", { key: key }));
-  });
-}
+  document.dispatchEvent(new KeyboardEvent("keyup", { key: key }));
+});
 
-function startApp() {
-  initBoard();
-  setupGate();
-}
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", startApp);
-} else {
-  startApp();
-}
+initBoard();
