@@ -236,7 +236,7 @@ function checkGuess() {
   if (guessString === activeTarget) {
     guessesRemaining = 0;
     setTimeout(() => {
-      showToast("You guessed right!" );
+      showToast("Good job, Jacob!" );
       shareResults(true);
     }, 1500);
     return;
@@ -247,7 +247,6 @@ function checkGuess() {
 
     if (guessesRemaining === 0) {
       setTimeout(() => {
-        showToast("You've run out of guesses! Game over!");
         const revealWord = isRealJacob ? rightGuessString : WORDS[Math.floor(Math.random() * WORDS.length)];
         showToast("Better luck next time!");
         shareResults(false);
