@@ -246,6 +246,7 @@ export const WORDS = [
     'chief',
     'walls',
     'cross',
+    'shart', 
     'wings',
     'grown',
     'cases',
